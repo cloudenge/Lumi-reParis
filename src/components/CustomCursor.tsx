@@ -4,9 +4,25 @@ import { Plane } from 'lucide-react';
 export const CustomCursor: React.FC = () => {
   const [position, setPosition] = useState({ x: -100, y: -100 });
   const [isHovering, setIsHovering] = useState(false);
+  const [isFinePointer, setIsFinePointer] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Check if device has fine pointer / hover support
+    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+    setIsFinePointer(mediaQuery.matches);
+
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      setIsFinePointer(e.matches);
+    };
+    mediaQuery.addEventListener('change', handleMediaChange);
+
+    if (!mediaQuery.matches) {
+      return () => {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+      };
+    }
+
     let animationFrameId: number;
     let particles: Array<{ x: number, y: number, vx: number, vy: number, life: number, maxLife: number, color: string }> = [];
 
@@ -29,13 +45,13 @@ export const CustomCursor: React.FC = () => {
 
     const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Check if hovering over an interactive element
+      if (!target) return;
       if (
-        target.tagName.toLowerCase() === 'button' ||
-        target.tagName.toLowerCase() === 'a' ||
+        target.tagName?.toLowerCase() === 'button' ||
+        target.tagName?.toLowerCase() === 'a' ||
         target.closest('button') ||
         target.closest('a') ||
-        target.classList.contains('cursor-pointer') ||
+        target.classList?.contains('cursor-pointer') ||
         target.closest('.cursor-pointer')
       ) {
         setIsHovering(true);
@@ -70,7 +86,6 @@ export const CustomCursor: React.FC = () => {
         const alpha = Math.max(0, 1 - progress);
         
         ctx.beginPath();
-        // Sprinkles look like little stars or circles
         ctx.arc(p.x, p.y, Math.max(0, (1 - progress) * 2.5), 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.globalAlpha = alpha;
@@ -95,12 +110,15 @@ export const CustomCursor: React.FC = () => {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      mediaQuery.removeEventListener('change', handleMediaChange);
       window.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseover', handleMouseOver);
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
+
+  if (!isFinePointer) return null;
 
   return (
     <>
@@ -123,10 +141,11 @@ export const CustomCursor: React.FC = () => {
                 ? 'text-yellow-500 fill-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.6)]' 
                 : 'text-[#0284c7] fill-[#0284c7] drop-shadow-[0_0_8px_rgba(2,132,199,0.5)]'
             }`} 
-            style={{ transform: 'translate(-30%, -30%)' }} // Align center of icon near actual cursor tip
+            style={{ transform: 'translate(-30%, -30%)' }}
           />
         </div>
       </div>
     </>
   );
 };
+
